@@ -31,6 +31,7 @@ import ru.reflexio.IReflection;
 import ru.reflexio.ITypeReflection;
 import ru.reflexio.MetaAnnotation;
 import ru.reflexio.TypeReflection;
+import ru.sanatio.conversion.IStringConverter;
 import ru.sanatio.validator.IValidator;
 import ru.sanatio.validator.ValidatorReference;
 
@@ -38,8 +39,18 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Validation {
+
+    private static final String DEFAULT_MESSAGE = "Value %s is not valid";
+
+    private final IStringConverter converter;
+
+    public Validation(IStringConverter converter) {
+        this.converter = converter;
+    }
 
     public ValidationResult validate(Object instance) {
         if (instance == null) {
@@ -69,12 +80,6 @@ public class Validation {
         return result;
     }
 
-    public ValidationResult validate(Method method, Object[] args, Object methodResult) {
-        ValidationResult result = validate(method, args);
-        validate(methodResult, method, result);
-        return result;
-    }
-
     public ValidationResult validate(Object value, AnnotatedElement element) {
         ValidationResult result = new ValidationResult();
         validate(value, element, result);
@@ -91,24 +96,42 @@ public class Validation {
         for (Annotation annotation : element.getAnnotations()) {
             ValidatorReference meta = annotation.annotationType().getAnnotation(ValidatorReference.class);
             if (meta != null) {
-                result.addEntry(validate(value, meta, annotation));
+                validate(value, meta, annotation, result);
             }
         }
     }
 
     public void validate(Object value, IReflection reflection, ValidationResult result) {
         for (MetaAnnotation<ValidatorReference> vr : reflection.getMetaAnnotations(ValidatorReference.class)) {
-            result.addEntry(validate(value, vr.getMetaAnnotation(), vr.getAnnotation()));
+            validate(value, vr.getMetaAnnotation(), vr.getAnnotation(), result);
         }
     }
 
-    public ValidationEntry validate(Object value, ValidatorReference meta, Annotation annotation) {
+    public void validate(Object value, ValidatorReference meta, Annotation annotation, ValidationResult result) {
         Class<? extends IValidator<? extends Annotation>> cl = meta.value();
         TypeReflection<? extends IValidator<? extends Annotation>> tr = new TypeReflection<>(cl);
         @SuppressWarnings("unchecked")
         IValidator<Annotation> validator = (IValidator<Annotation>) tr.instantiate();
         boolean valid = validator.validate(value, annotation);
-        return new ValidationEntry(value, annotation, valid);
+        if (!valid) {
+            result.addMessage(getValidationMessage(value, annotation, converter));
+        }
+    }
+
+    private String getValidationMessage(Object value, Annotation annotation, IStringConverter converter) {
+        List<Object> params = new ArrayList<>();
+        params.add(value);
+        String message = DEFAULT_MESSAGE;
+        ITypeReflection<?> tr = new TypeReflection<>(annotation.annotationType());
+        for (IInstanceMethodReflection method : tr.getInstanceMethods()) {
+            Object methodValue = method.invoke(annotation);
+            if ("message".equals(method.getName())) {
+                message = methodValue.toString();
+            } else {
+                params.add(methodValue);
+            }
+        }
+        return String.format(converter == null ? message : converter.getString(message), params.toArray());
     }
 
 }

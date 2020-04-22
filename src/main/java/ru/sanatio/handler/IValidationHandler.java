@@ -25,10 +25,10 @@
  */
 package ru.sanatio.handler;
 
-import ru.sanatio.ValidationEntry;
+import ru.sanatio.ValidationResult;
 
 public interface IValidationHandler {
 
-    void handle(ValidationEntry entry);
+    void handle(ValidationResult result);
 
 }

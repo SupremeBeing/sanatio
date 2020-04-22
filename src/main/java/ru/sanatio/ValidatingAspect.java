@@ -30,15 +30,16 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import ru.reflexio.TypeReflection;
 import ru.sanatio.conversion.SameStringConverter;
-import ru.sanatio.handler.ConsoleValidationHandler;
 import ru.sanatio.handler.IValidationHandler;
+
+import java.lang.reflect.Method;
 
 @Aspect
 public class ValidatingAspect {
 
-    private final Validation validation = new Validation();
-    private final IValidationHandler handler = new ConsoleValidationHandler(new SameStringConverter());
+    private final Validation validation = new Validation(new SameStringConverter());
 
     @Pointcut("execution(@Validatable * *.*(..))")
     void annotatedMethod() {}
@@ -59,13 +60,14 @@ public class ValidatingAspect {
     private Object validate(ProceedingJoinPoint pjp, Validatable validatable) throws Throwable {
         if (pjp.getSignature() instanceof MethodSignature) {
             MethodSignature signature = (MethodSignature) pjp.getSignature();
+            Method method = signature.getMethod();
+            TypeReflection<? extends IValidationHandler> tr = new TypeReflection<>(validatable.handler());
+            IValidationHandler handler = tr.instantiate();
+            ValidationResult paramsResult = validation.validate(method, pjp.getArgs());
+            handler.handle(paramsResult);
             Object result = pjp.proceed();
-            ValidationResult vr = validation.validate(signature.getMethod(), pjp.getArgs(), result);
-            for (ValidationEntry e : vr) {
-                if (!e.isValid()) {
-                    handler.handle(e);
-                }
-            }
+            ValidationResult methodResult = validation.validate(result, method);
+            handler.handle(methodResult);
             return result;
         }
         return pjp.proceed();

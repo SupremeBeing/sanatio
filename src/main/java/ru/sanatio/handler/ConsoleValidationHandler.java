@@ -25,20 +25,15 @@
  */
 package ru.sanatio.handler;
 
-import ru.sanatio.ValidationEntry;
-import ru.sanatio.conversion.IStringConverter;
+import ru.sanatio.ValidationResult;
 
 public class ConsoleValidationHandler implements IValidationHandler {
 
-    private final IStringConverter converter;
-
-    public ConsoleValidationHandler(IStringConverter converter) {
-        this.converter = converter;
-    }
-
     @Override
-    public void handle(ValidationEntry entry) {
-        System.out.println(entry.getValidationMessage(converter));
+    public void handle(ValidationResult result) {
+        for (String message : result) {
+            System.out.println(message);
+        }
     }
 
 }

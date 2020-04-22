@@ -29,26 +29,21 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class ValidationResult implements Iterable<ValidationEntry> {
+public class ValidationResult implements Iterable<String> {
 
-    private final List<ValidationEntry> entries = new ArrayList<>();
+    private final List<String> messages = new ArrayList<>();
 
     public boolean isValid() {
-        for (ValidationEntry entry : entries) {
-            if (!entry.isValid()) {
-                return false;
-            }
-        }
-        return true;
+        return messages.isEmpty();
     }
 
-    public void addEntry(ValidationEntry entry) {
-        entries.add(entry);
+    public void addMessage(String message) {
+        messages.add(message);
     }
 
     @Override
-    public Iterator<ValidationEntry> iterator() {
-        return entries.iterator();
+    public Iterator<String> iterator() {
+        return messages.iterator();
     }
 
 }

@@ -25,6 +25,7 @@
  */
 package ru.sanatio;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import ru.sanatio.conversion.SameStringConverter;
 import ru.sanatio.handler.ConsoleValidationHandler;
@@ -34,13 +35,12 @@ public class ValidationTest {
 
     @Test
     public void testValidation() {
-        IValidationHandler handler = new ConsoleValidationHandler(new SameStringConverter());
+        IValidationHandler handler = new ConsoleValidationHandler();
         TestClass tc = new TestClass();
-        Validation v = new Validation();
-        ValidationResult result = v.validate(tc);
-        for (ValidationEntry e : result) {
-            handler.handle(e);
-        }
+        Validation validation = new Validation(new SameStringConverter());
+        ValidationResult result = validation.validate(tc);
+        handler.handle(result);
+        Assertions.assertFalse(result.isValid());
     }
 
 }
